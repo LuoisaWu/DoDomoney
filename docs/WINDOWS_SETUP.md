@@ -9,11 +9,7 @@
 - Python 3.11 或更高版本
 - npm
 
-如果 `git` 命令不可用，但本机已经安装 Git，可以把 Git 的 `cmd` 目录加入环境变量。例如：
 
-```text
-D:\Wujialu\下载\Git\Git\cmd
-```
 
 ## 一键启动
 
