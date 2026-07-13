@@ -7,10 +7,12 @@ __pycache__/
 .ruff_cache/
 
 # Node
+/package-lock.json
 node_modules/
 dist/
 dist-electron/
 .vite/
+*.tsbuildinfo
 
 # Local data
 *.db

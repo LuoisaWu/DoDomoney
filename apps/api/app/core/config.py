@@ -16,9 +16,10 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     cors_origins_raw: str = Field(
-        default="http://localhost:5173",
+        default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("DODOMONEY_CORS_ORIGINS", "DODOMONEY_CORS_ORIGINS_RAW"),
     )
+    cors_origin_regex: str | None = r"http://(localhost|127\.0\.0\.1):\d+"
 
     @cached_property
     def cors_origins(self) -> list[str]:
