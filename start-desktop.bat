@@ -10,16 +10,18 @@ cd /d "%DESKTOP_DIR%" || (
   exit /b 1
 )
 
-if not exist "node_modules" (
-  echo [Dodomoney] Installing desktop dependencies...
-  if not defined ELECTRON_MIRROR set "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/"
-  npm install
-  if errorlevel 1 (
-    echo [Dodomoney] Desktop dependency installation failed.
-    echo [Dodomoney] Try: set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
-    pause
-    exit /b 1
-  )
+if not exist "package-lock.json" (
+  echo [Dodomoney] Vue 3 dependency lock is not generated yet.
+  echo [Dodomoney] Run this command yourself first: npm install
+  pause
+  exit /b 1
+)
+
+if not exist "node_modules\vue\package.json" (
+  echo [Dodomoney] Vue 3 dependencies are not installed.
+  echo [Dodomoney] Run this command yourself first: npm install
+  pause
+  exit /b 1
 )
 
 echo [Dodomoney] Desktop app starting...

@@ -1,6 +1,6 @@
 # Dodomoney Desktop
 
-Electron + React + TypeScript 桌面客户端。
+Electron + Vue 3 + TypeScript 桌面客户端。
 
 ## 运行
 
@@ -15,4 +15,4 @@ npm run dev
 
 - `src/main`：Electron 主进程。
 - `src/preload`：安全桥接层。
-- `src/renderer`：React 页面、组件、接口调用。
+- `src/renderer`：Vue 3 页面、组件、接口调用。

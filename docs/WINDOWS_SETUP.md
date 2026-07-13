@@ -44,11 +44,15 @@ start-desktop.bat
 
 `start-api.bat` 会检查 `apps\api\.venv` 是否存在。不存在时自动创建 Python 虚拟环境，并安装 `requirements.txt` 中的后端依赖。
 
-`start-desktop.bat` 会检查 `apps\desktop\node_modules` 是否存在。不存在时自动执行 `npm install`，并临时设置 Electron 国内镜像：
+`start-desktop.bat` 只负责启动，不会自动安装或构建前端依赖。首次运行或前端依赖变化后，请自行执行：
 
 ```bat
-ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+cd apps\desktop
+set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+npm install
 ```
+
+安装会根据 `package.json` 生成 Vue 3 对应的 `package-lock.json`。之后才可使用启动脚本。
 
 ## 验证后端是否正常
 

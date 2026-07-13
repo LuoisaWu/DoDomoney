@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./dodomoney.db"
     api_host: str = "127.0.0.1"
     api_port: int = 8000
+    llm_api_key: str | None = None
+    llm_base_url: str = "https://api.openai.com/v1"
+    llm_model: str = "gpt-4.1-mini"
+    llm_timeout_seconds: float = 30.0
     cors_origins_raw: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173",
         validation_alias=AliasChoices("DODOMONEY_CORS_ORIGINS", "DODOMONEY_CORS_ORIGINS_RAW"),

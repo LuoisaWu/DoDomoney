@@ -12,3 +12,29 @@ class AssistantTone(StrEnum):
     GENTLE = "gentle"
     ADVISOR = "advisor"
     MINIMAL = "minimal"
+
+
+class PersonaMode(StrEnum):
+    BALANCED = "balanced"
+    CUTE = "cute"
+    RATIONAL = "rational"
+    ENCOURAGING = "encouraging"
+
+
+class VoiceStyle(StrEnum):
+    WARM = "warm"
+    PLAYFUL = "playful"
+    DIRECT = "direct"
+    CALM = "calm"
+
+
+class LedgerType(StrEnum):
+    PERSONAL = "personal"
+    FAMILY = "family"
+    SHARED = "shared"
+
+
+class LedgerRole(StrEnum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"

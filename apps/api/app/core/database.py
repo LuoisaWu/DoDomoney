@@ -36,3 +36,113 @@ def initialize_database() -> None:
     schema_path = Path(__file__).resolve().parents[2] / "migrations" / "001_init.sql"
     with transaction() as conn:
         conn.executescript(schema_path.read_text(encoding="utf-8"))
+        _migrate_existing_database(conn)
+
+
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(row["name"] == column for row in rows)
+
+
+def _migrate_existing_database(conn: sqlite3.Connection) -> None:
+    if not _has_column(conn, "users", "password_hash"):
+        conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id)")
+    conn.execute(
+        "INSERT OR IGNORE INTO users (id, email, display_name) VALUES (1, 'local@dodomoney.app', '本地用户')"
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO ledgers (id, owner_user_id, name, type) VALUES (1, 1, '个人账本', 'personal')"
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO ledger_members (ledger_id, user_id, role) VALUES (1, 1, 'owner')"
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS assistant_personas (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            assistant_name TEXT NOT NULL DEFAULT '账小喵',
+            avatar TEXT NOT NULL DEFAULT '🐱',
+            voice_style TEXT NOT NULL CHECK (voice_style IN ('warm', 'playful', 'direct', 'calm')) DEFAULT 'warm',
+            snark_level INTEGER NOT NULL CHECK (snark_level BETWEEN 0 AND 5) DEFAULT 1,
+            mode TEXT NOT NULL CHECK (mode IN ('balanced', 'cute', 'rational', 'encouraging')) DEFAULT 'cute',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute("INSERT OR IGNORE INTO assistant_personas (user_id) SELECT id FROM users")
+
+    persona_columns = {
+        "reply_length": "TEXT NOT NULL DEFAULT 'short'",
+        "emoji_level": "INTEGER NOT NULL DEFAULT 1",
+        "proactive_insights": "INTEGER NOT NULL DEFAULT 1",
+        "custom_instructions": "TEXT NOT NULL DEFAULT ''",
+    }
+    for column, definition in persona_columns.items():
+        if not _has_column(conn, "assistant_personas", column):
+            conn.execute(f"ALTER TABLE assistant_personas ADD COLUMN {column} {definition}")
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ledger_id INTEGER NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+            content TEXT NOT NULL,
+            parsed_json TEXT,
+            recorded INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_chat_messages_context ON chat_messages (ledger_id, user_id, id)"
+    )
+
+    if not _has_column(conn, "entries", "ledger_id"):
+        conn.execute("ALTER TABLE entries ADD COLUMN ledger_id INTEGER NOT NULL DEFAULT 1")
+    if not _has_column(conn, "budgets", "ledger_id"):
+        conn.execute("ALTER TABLE budgets ADD COLUMN ledger_id INTEGER NOT NULL DEFAULT 1")
+    if not _has_column(conn, "category_preferences", "user_id"):
+        conn.execute("ALTER TABLE category_preferences ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_entries_ledger_occurred_at ON entries (ledger_id, occurred_at)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_entries_ledger_category ON entries (ledger_id, category)"
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS loans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ledger_id INTEGER NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+            creditor TEXT NOT NULL,
+            borrowed_at TEXT NOT NULL,
+            principal TEXT NOT NULL,
+            repayment_months INTEGER NOT NULL CHECK (repayment_months > 0),
+            annual_rate TEXT NOT NULL DEFAULT '0',
+            repayment_method TEXT NOT NULL CHECK (repayment_method IN ('equal_payment', 'equal_principal')) DEFAULT 'equal_payment',
+            first_payment_date TEXT NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_loans_ledger_borrowed_at ON loans (ledger_id, borrowed_at DESC)"
+    )

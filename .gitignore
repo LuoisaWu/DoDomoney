@@ -19,6 +19,7 @@ dist-electron/
 *.sqlite
 *.sqlite3
 .env
+apps/api/uploads/
 
 # OS / editors
 .DS_Store
