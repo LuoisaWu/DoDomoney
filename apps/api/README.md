@@ -11,6 +11,8 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
+接口文档启动后可访问 `http://127.0.0.1:8000/docs`。当前接口包括聊天记账、账单 CRUD、月度统计、分类偏好和预算管理。
+
 ## API 入口
 
 - `GET /health`：健康检查。

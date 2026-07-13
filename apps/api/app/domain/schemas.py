@@ -10,9 +10,9 @@ from app.domain.enums import AssistantTone, EntryType
 class EntryBase(BaseModel):
     type: EntryType
     amount: Decimal = Field(gt=0)
-    category: str
-    subcategory: Optional[str] = None
-    description: str
+    category: str = Field(min_length=1, max_length=80)
+    subcategory: Optional[str] = Field(default=None, max_length=80)
+    description: str = Field(min_length=1, max_length=500)
     occurred_at: datetime
 
 
@@ -43,13 +43,7 @@ class ChatRecordRequest(BaseModel):
     assistant_tone: AssistantTone = AssistantTone.CUTE
 
 
-class ParsedEntry(BaseModel):
-    type: EntryType
-    amount: Decimal
-    category: str
-    subcategory: Optional[str] = None
-    description: str
-    occurred_at: datetime
+class ParsedEntry(EntryBase):
     confidence: float = Field(ge=0, le=1)
 
 
@@ -66,6 +60,36 @@ class BudgetCreate(BaseModel):
     category: Optional[str] = None
 
 
+class BudgetUpdate(BaseModel):
+    amount: Optional[Decimal] = Field(default=None, gt=0)
+
+
 class BudgetRead(BudgetCreate):
     id: int
     created_at: datetime
+
+
+class CategorySummary(BaseModel):
+    category: str
+    amount: Decimal
+    percentage: float
+
+
+class MonthlySummary(BaseModel):
+    month: str
+    expense_total: Decimal
+    income_total: Decimal
+    balance: Decimal
+    entry_count: int
+    categories: list[CategorySummary]
+
+
+class PreferenceCreate(BaseModel):
+    keyword: str = Field(min_length=1, max_length=80)
+    category: str = Field(min_length=1, max_length=80)
+    subcategory: Optional[str] = None
+
+
+class PreferenceRead(PreferenceCreate):
+    id: int
+    hit_count: int

@@ -17,3 +17,12 @@ class LedgerService:
 
     def delete_entry(self, entry_id: int) -> bool:
         return self.repository.delete_entry(entry_id)
+
+    def monthly_summary(self, month: str):
+        return self.repository.monthly_summary(month)
+
+    def list_preferences(self):
+        return self.repository.list_preferences()
+
+    def save_preference(self, keyword: str, category: str, subcategory: str | None):
+        return self.repository.save_preference(keyword, category, subcategory)

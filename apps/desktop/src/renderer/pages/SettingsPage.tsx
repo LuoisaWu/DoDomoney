@@ -1,43 +1,4 @@
 import type { AssistantTone } from "../types";
-
-const toneOptions: Array<{ value: AssistantTone; label: string }> = [
-  { value: "cute", label: "可爱陪伴型" },
-  { value: "snarky", label: "毒舌吐槽型" },
-  { value: "gentle", label: "温柔鼓励型" },
-  { value: "advisor", label: "理性顾问型" },
-  { value: "minimal", label: "极简冷淡型" }
-];
-
-interface SettingsPageProps {
-  assistantTone: AssistantTone;
-  onToneChange: (tone: AssistantTone) => void;
-}
-
-export function SettingsPage({ assistantTone, onToneChange }: SettingsPageProps) {
-  return (
-    <section className="work-area">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">助手设置</p>
-          <h1>账小喵人格</h1>
-        </div>
-      </header>
-
-      <div className="settings-panel">
-        <label>
-          回复风格
-          <select
-            value={assistantTone}
-            onChange={(event) => onToneChange(event.target.value as AssistantTone)}
-          >
-            {toneOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    </section>
-  );
-}
+const toneOptions: Array<{ value: AssistantTone; label: string; hint: string }> = [{ value: "cute", label: "可爱陪伴型", hint: "轻松、亲切，适合日常记账" }, { value: "snarky", label: "毒舌吐槽型", hint: "适度调侃消费行为" }, { value: "gentle", label: "温柔鼓励型", hint: "多一点安慰和正向反馈" }, { value: "advisor", label: "理性顾问型", hint: "更关注预算和趋势" }, { value: "minimal", label: "极简冷淡型", hint: "只给必要的信息" }];
+interface Props { assistantTone: AssistantTone; onToneChange: (tone: AssistantTone) => void; }
+export function SettingsPage({ assistantTone, onToneChange }: Props) { return <section className="work-area"><header className="page-header"><div><p className="eyebrow">助手设置</p><h1>把账小喵调成你喜欢的样子</h1></div></header><div className="settings-panel"><div className="settings-title"><div className="avatar">喵</div><div><strong>账小喵</strong><span>你的私人 AI 财务助手</span></div></div><label>回复风格<select value={assistantTone} onChange={(e) => onToneChange(e.target.value as AssistantTone)}>{toneOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><p className="settings-hint">{toneOptions.find((option) => option.value === assistantTone)?.hint}</p><div className="settings-divider" /><div className="future-feature"><span>后续扩展</span><p>这里会加入自定义名称、头像、调侃程度、回复长度和模型提供商设置。</p></div></div></section>; }

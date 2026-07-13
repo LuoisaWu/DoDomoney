@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.domain.schemas import EntryCreate, EntryRead, EntryUpdate
+from app.domain.schemas import EntryCreate, EntryRead, EntryUpdate, MonthlySummary, PreferenceCreate, PreferenceRead
 from app.services.ledger_service import LedgerService
 
 router = APIRouter()
@@ -13,6 +13,27 @@ def list_entries(
     offset: int = Query(default=0, ge=0),
 ) -> list[EntryRead]:
     return ledger_service.list_entries(limit=limit, offset=offset)
+
+
+@router.get("/summary", response_model=MonthlySummary)
+def monthly_summary(month: str = Query(pattern=r"^\d{4}-\d{2}$")) -> MonthlySummary:
+    raw = ledger_service.monthly_summary(month)
+    expense = raw["expense_total"]
+    categories = [
+        {"category": row["category"], "amount": row["amount"], "percentage": round(float(row["amount"]) / float(expense) * 100, 1) if expense else 0}
+        for row in raw["categories"]
+    ]
+    return MonthlySummary(month=month, expense_total=expense, income_total=raw["income_total"], balance=raw["income_total"] - expense, entry_count=raw["count"], categories=categories)
+
+
+@router.get("/preferences", response_model=list[PreferenceRead])
+def list_preferences() -> list[PreferenceRead]:
+    return [PreferenceRead(**item) for item in ledger_service.list_preferences()]
+
+
+@router.post("/preferences", response_model=PreferenceRead)
+def save_preference(payload: PreferenceCreate) -> PreferenceRead:
+    return PreferenceRead(**ledger_service.save_preference(payload.keyword, payload.category, payload.subcategory))
 
 
 @router.post("", response_model=EntryRead, status_code=status.HTTP_201_CREATED)

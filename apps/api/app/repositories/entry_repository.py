@@ -94,3 +94,31 @@ class EntryRepository:
         with transaction() as conn:
             cursor = conn.execute("DELETE FROM entries WHERE id = ?", (entry_id,))
         return cursor.rowcount > 0
+
+    def monthly_summary(self, month: str) -> dict[str, Any]:
+        with transaction() as conn:
+            totals = conn.execute(
+                "SELECT type, COALESCE(SUM(CAST(amount AS REAL)), 0) AS total, COUNT(*) AS count FROM entries WHERE substr(occurred_at, 1, 7) = ? GROUP BY type",
+                (month,),
+            ).fetchall()
+            categories = conn.execute(
+                "SELECT category, COALESCE(SUM(CAST(amount AS REAL)), 0) AS amount FROM entries WHERE substr(occurred_at, 1, 7) = ? AND type = 'expense' GROUP BY category ORDER BY amount DESC",
+                (month,),
+            ).fetchall()
+        expense = next((float(row["total"]) for row in totals if row["type"] == "expense"), 0.0)
+        income = next((float(row["total"]) for row in totals if row["type"] == "income"), 0.0)
+        return {"expense_total": Decimal(str(expense)), "income_total": Decimal(str(income)), "count": sum(int(row["count"]) for row in totals), "categories": categories}
+
+    def list_preferences(self) -> list[dict[str, Any]]:
+        with transaction() as conn:
+            rows = conn.execute("SELECT * FROM category_preferences ORDER BY hit_count DESC, updated_at DESC").fetchall()
+        return [dict(row) for row in rows]
+
+    def save_preference(self, keyword: str, category: str, subcategory: str | None) -> dict[str, Any]:
+        with transaction() as conn:
+            conn.execute(
+                "INSERT INTO category_preferences (keyword, category, subcategory) VALUES (?, ?, ?) ON CONFLICT(keyword, category, subcategory) DO UPDATE SET hit_count = hit_count + 1, updated_at = CURRENT_TIMESTAMP",
+                (keyword, category, subcategory),
+            )
+            row = conn.execute("SELECT * FROM category_preferences WHERE keyword = ? AND category = ? AND subcategory IS ?", (keyword, category, subcategory)).fetchone()
+        return dict(row)

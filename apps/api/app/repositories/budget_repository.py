@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any
 
 from app.core.database import transaction
-from app.domain.schemas import BudgetCreate, BudgetRead
+from app.domain.schemas import BudgetCreate, BudgetRead, BudgetUpdate
 
 
 def _row_to_budget(row: Any) -> BudgetRead:
@@ -35,3 +35,15 @@ class BudgetRepository:
             )
             row = conn.execute("SELECT * FROM budgets WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return _row_to_budget(row)
+
+    def update_budget(self, budget_id: int, payload: BudgetUpdate) -> BudgetRead | None:
+        with transaction() as conn:
+            if payload.amount is not None:
+                conn.execute("UPDATE budgets SET amount = ? WHERE id = ?", (str(payload.amount), budget_id))
+            row = conn.execute("SELECT * FROM budgets WHERE id = ?", (budget_id,)).fetchone()
+        return _row_to_budget(row) if row else None
+
+    def delete_budget(self, budget_id: int) -> bool:
+        with transaction() as conn:
+            cursor = conn.execute("DELETE FROM budgets WHERE id = ?", (budget_id,))
+        return cursor.rowcount > 0

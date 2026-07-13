@@ -1,40 +1,10 @@
-import type { Entry } from "../types";
-
-interface InsightsPageProps {
-  entries: Entry[];
-}
-
-export function InsightsPage({ entries }: InsightsPageProps) {
-  const expenseTotal = entries
-    .filter((entry) => entry.type === "expense")
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-  const incomeTotal = entries
-    .filter((entry) => entry.type === "income")
-    .reduce((sum, entry) => sum + Number(entry.amount), 0);
-
-  return (
-    <section className="work-area">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">消费统计</p>
-          <h1>本阶段概览</h1>
-        </div>
-      </header>
-
-      <div className="metric-grid">
-        <div className="metric-card">
-          <span>总支出</span>
-          <strong>{expenseTotal.toFixed(2)}</strong>
-        </div>
-        <div className="metric-card">
-          <span>总收入</span>
-          <strong>{incomeTotal.toFixed(2)}</strong>
-        </div>
-        <div className="metric-card">
-          <span>结余</span>
-          <strong>{(incomeTotal - expenseTotal).toFixed(2)}</strong>
-        </div>
-      </div>
-    </section>
-  );
-}
+import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { Budget, Entry, MonthlySummary } from "../types";
+import { apiClient } from "../services/apiClient";
+interface Props { entries: Entry[]; }
+const monthNow = () => new Date().toISOString().slice(0, 7);
+export function InsightsPage({ entries }: Props) { const [month, setMonth] = useState(monthNow()); const [summary, setSummary] = useState<MonthlySummary | null>(null); const [budgets, setBudgets] = useState<Budget[]>([]); const [amount, setAmount] = useState(""); const [loading, setLoading] = useState(false);
+  useEffect(() => { setLoading(true); Promise.all([apiClient.summary(month), apiClient.listBudgets()]).then(([s, b]) => { setSummary(s); setBudgets(b.filter((item) => item.month.startsWith(month))); }).catch(() => setSummary(null)).finally(() => setLoading(false)); }, [month, entries.length]);
+  async function addBudget() { if (!amount) return; await apiClient.createBudget(month, amount); setAmount(""); const next = await apiClient.listBudgets(); setBudgets(next.filter((item) => item.month.startsWith(month))); }
+  return <section className="work-area"><header className="page-header"><div><p className="eyebrow">消费分析</p><h1>看见钱的去向，也看见自己的节奏</h1></div><input className="month-picker" type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></header>{loading && <div className="loading-line">正在加载统计...</div>}<div className="metric-grid"><div className="metric-card expense-card"><span>本月支出</span><strong>¥ {summary?.expense_total ?? "0.00"}</strong></div><div className="metric-card income-card"><span>本月收入</span><strong>¥ {summary?.income_total ?? "0.00"}</strong></div><div className="metric-card"><span>结余</span><strong>¥ {summary?.balance ?? "0.00"}</strong></div></div><div className="insight-grid"><div className="section-block"><div className="section-heading"><div><h2>分类占比</h2><span>按本月支出计算</span></div></div>{summary?.categories.length ? summary.categories.map((item) => <div className="category-row" key={item.category}><div><span>{item.category}</span><strong>¥ {item.amount}</strong></div><div className="progress"><i style={{ width: `${item.percentage}%` }} /></div><small>{item.percentage}%</small></div>) : <p className="empty-copy">本月还没有支出数据。</p>}</div><div className="section-block"><div className="section-heading"><div><h2>月度预算</h2><span>给花钱留一点边界</span></div></div><div className="budget-add"><input type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="预算金额" /><button className="primary-button" onClick={() => void addBudget()} title="添加预算"><Plus size={16} />添加</button></div>{budgets.length ? budgets.map((budget) => <div className="budget-row" key={budget.id}><div><strong>{budget.category || "总预算"}</strong><span>¥ {budget.amount}</span></div><button className="table-action" title="删除" onClick={() => void apiClient.deleteBudget(budget.id).then(() => setBudgets((list) => list.filter((item) => item.id !== budget.id)))}><Trash2 size={16} /></button></div>) : <p className="empty-copy">还没有设置本月预算。</p>}</div></div></section>; }
