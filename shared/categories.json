@@ -1,0 +1,56 @@
+{
+  "expense": [
+    {
+      "id": "food",
+      "name": "餐饮",
+      "children": ["早餐", "午餐", "晚餐", "饮品", "零食", "聚餐"]
+    },
+    {
+      "id": "transport",
+      "name": "交通出行",
+      "children": ["公交地铁", "打车", "火车", "机票", "停车", "加油"]
+    },
+    {
+      "id": "shopping",
+      "name": "购物",
+      "children": ["日用品", "服饰", "数码", "家居", "礼物"]
+    },
+    {
+      "id": "entertainment",
+      "name": "娱乐",
+      "children": ["游戏", "电影", "会员订阅", "演出", "旅游"]
+    },
+    {
+      "id": "study_work",
+      "name": "学习办公",
+      "children": ["书籍", "课程", "软件服务", "办公用品", "服务器"]
+    },
+    {
+      "id": "health",
+      "name": "健康",
+      "children": ["药品", "体检", "运动", "医疗"]
+    },
+    {
+      "id": "other_expense",
+      "name": "其他支出",
+      "children": ["其他"]
+    }
+  ],
+  "income": [
+    {
+      "id": "salary",
+      "name": "工资",
+      "children": ["工资", "奖金"]
+    },
+    {
+      "id": "part_time",
+      "name": "兼职",
+      "children": ["兼职", "项目收入"]
+    },
+    {
+      "id": "other_income",
+      "name": "其他收入",
+      "children": ["红包", "转账", "其他"]
+    }
+  ]
+}
