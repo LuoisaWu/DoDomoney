@@ -125,9 +125,49 @@ class ParsedTransaction(BaseModel):
         return all((self.amount, self.category, self.occurred_at, self.type)) and not self.follow_up_fields
 
 
+LoanFollowUpField = Literal[
+    "creditor",
+    "borrowed_at",
+    "principal",
+    "repayment_months",
+    "annual_rate",
+    "repayment_method",
+    "first_payment_date",
+]
+
+
+class ParsedLoan(BaseModel):
+    creditor: Optional[str] = Field(default=None, max_length=120)
+    borrowed_at: Optional[date] = None
+    principal: Optional[Decimal] = Field(default=None, gt=0)
+    repayment_months: Optional[int] = Field(default=None, gt=0, le=600)
+    annual_rate: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    repayment_method: Optional[Literal["equal_payment", "equal_principal"]] = None
+    first_payment_date: Optional[date] = None
+    note: str = Field(default="", max_length=500)
+    confidence: float = Field(default=0.8, ge=0, le=1)
+    follow_up_fields: list[LoanFollowUpField] = Field(default_factory=list)
+    follow_up_question: Optional[str] = Field(default=None, max_length=300)
+    awaiting_confirmation: bool = False
+
+    @property
+    def is_complete(self) -> bool:
+        required = (
+            self.creditor,
+            self.borrowed_at,
+            self.principal,
+            self.repayment_months,
+            self.annual_rate is not None,
+            self.repayment_method,
+            self.first_payment_date,
+        )
+        return all(required) and not self.follow_up_fields
+
+
 class ChatRecordRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     pending_context: Optional[ParsedTransaction] = None
+    pending_loan: Optional[ParsedLoan] = None
 
 
 class AssistantPersonaBase(BaseModel):
@@ -156,7 +196,10 @@ class ChatRecordResponse(BaseModel):
     assistant_avatar: str = "🐱"
     reply: str
     entry: Optional[EntryRead] = None
-    parsed: ParsedTransaction
+    loan_id: Optional[int] = None
+    record_type: Literal["transaction", "loan"] = "transaction"
+    parsed: Optional[ParsedTransaction] = None
+    parsed_loan: Optional[ParsedLoan] = None
     needs_follow_up: bool = False
 
 
@@ -165,6 +208,7 @@ class ChatMessageRead(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     parsed: Optional[ParsedTransaction] = None
+    parsed_loan: Optional[ParsedLoan] = None
     recorded: bool = False
     created_at: datetime
 

@@ -33,13 +33,20 @@ export interface ParsedTransaction {
   follow_up_fields: Array<"amount" | "category" | "occurred_at" | "type">;
   follow_up_question?: string | null;
 }
+export type LoanFollowUpField = "creditor" | "borrowed_at" | "principal" | "repayment_months" | "annual_rate" | "repayment_method" | "first_payment_date";
+export interface ParsedLoan extends LoanDraft {
+  confidence: number; follow_up_fields: LoanFollowUpField[]; follow_up_question?: string | null; awaiting_confirmation: boolean;
+}
 export interface AssistantPersona {
   user_id: number; assistant_name: string; avatar: string; voice_style: VoiceStyle;
   mode: PersonaMode; reply_length: ReplyLength; emoji_level: number;
   proactive_insights: boolean; custom_instructions: string; created_at: string; updated_at: string;
 }
-export interface ChatRecordResponse { assistant_name: string; assistant_avatar: string; reply: string; entry?: Entry | null; parsed: ParsedTransaction; needs_follow_up: boolean; }
-export interface ChatMessage { id: number; role: "user" | "assistant"; content: string; parsed?: ParsedTransaction | null; recorded: boolean; created_at: string; }
+export interface ChatRecordResponse {
+  assistant_name: string; assistant_avatar: string; reply: string; entry?: Entry | null; loan_id?: number | null;
+  record_type: "transaction" | "loan"; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null; needs_follow_up: boolean;
+}
+export interface ChatMessage { id: number; role: "user" | "assistant"; content: string; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null; recorded: boolean; created_at: string; }
 export interface Budget { id: number; ledger_id: number; month: string; amount: string; category?: string | null; created_at: string; }
 export interface CategorySummary { category: string; amount: string; percentage: number; }
 export interface MonthlySummary { month: string; expense_total: string; income_total: string; balance: string; entry_count: number; categories: CategorySummary[]; }

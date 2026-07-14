@@ -10,7 +10,7 @@ import InsightsPage from "./pages/InsightsPage.vue";
 import LoansPage from "./pages/LoansPage.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 import { apiClient, setApiContext } from "./services/apiClient";
-import type { AssistantPersona, Entry, Ledger, LoanDraft, LoginResponse, User } from "./types";
+import type { AssistantPersona, Entry, Ledger, LoginResponse, User } from "./types";
 
 type Page = "chat" | "entries" | "loans" | "insights" | "accounts" | "settings";
 
@@ -28,7 +28,6 @@ const user = ref<User | null>(null);
 const ledgers = ref<Ledger[]>([]);
 const activeLedgerId = ref<number | null>(null);
 const entries = ref<Entry[]>([]);
-const loanDraft = ref<LoanDraft | null>(null);
 const persona = ref<AssistantPersona>({
   user_id: 1,
   assistant_name: "账小喵",
@@ -78,11 +77,6 @@ async function changeLedger(ledger: Ledger) {
 
 function updateLedgers(next: Ledger[]) {
   ledgers.value = next;
-}
-
-function openLoanDraft(draft: LoanDraft) {
-  loanDraft.value = draft;
-  page.value = "loans";
 }
 
 async function finishAuthentication(login: LoginResponse) {
@@ -170,7 +164,7 @@ onMounted(() => {
 
     <main class="main-panel">
       <div v-if="error" class="status-banner">{{ error }}</div>
-      <ChatPage v-if="page === 'chat' && activeLedgerId" :persona="persona" :user="user" :ledger-id="activeLedgerId" @entry-created="addEntry" @loan-detected="openLoanDraft" />
+      <ChatPage v-if="page === 'chat' && activeLedgerId" :persona="persona" :user="user" :ledger-id="activeLedgerId" @entry-created="addEntry" />
       <EntriesPage
         v-else-if="page === 'entries'"
         :entries="entries"
@@ -179,7 +173,7 @@ onMounted(() => {
         @updated="updateEntry"
       />
       <InsightsPage v-else-if="page === 'insights'" :entries="entries" />
-      <LoansPage v-else-if="page === 'loans' && activeLedgerId" :ledger-id="activeLedgerId" :draft="loanDraft" @draft-consumed="loanDraft = null" />
+      <LoansPage v-else-if="page === 'loans' && activeLedgerId" :ledger-id="activeLedgerId" />
       <AccountsPage
         v-else-if="page === 'accounts' && user && activeLedgerId"
         :user="user"

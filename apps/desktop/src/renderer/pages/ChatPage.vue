@@ -2,15 +2,16 @@
 import { Bot, SendHorizontal, Trash2 } from "lucide-vue-next";
 import { nextTick, ref, watch } from "vue";
 import { apiClient } from "../services/apiClient";
-import type { AssistantPersona, ChatMessage, Entry, LoanDraft, ParsedTransaction, User } from "../types";
+import type { AssistantPersona, ChatMessage, Entry, LoanFollowUpField, ParsedLoan, ParsedTransaction, User } from "../types";
 
 const props = defineProps<{ persona: AssistantPersona; user: User; ledgerId: number }>();
-const emit = defineEmits<{ entryCreated: [entry: Entry]; loanDetected: [draft: LoanDraft] }>();
+const emit = defineEmits<{ entryCreated: [entry: Entry] }>();
 
 const message = ref("");
 const busy = ref(false);
 const loading = ref(true);
 const pendingContext = ref<ParsedTransaction | null>(null);
+const pendingLoan = ref<ParsedLoan | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const messageList = ref<HTMLElement | null>(null);
 
@@ -24,6 +25,12 @@ function formatTime(value?: string | null) {
 function fieldLabel(value: ParsedTransaction["follow_up_fields"][number]) {
   return { amount: "金额", category: "类别", occurred_at: "时间", type: "收支类型" }[value];
 }
+function loanFieldLabel(value: LoanFollowUpField) {
+  return { creditor: "出借方", borrowed_at: "借款日期", principal: "本金", repayment_months: "还款期数", annual_rate: "年利率", repayment_method: "还款方式", first_payment_date: "首次还款日" }[value];
+}
+function repaymentMethod(value?: ParsedLoan["repayment_method"]) {
+  return value === "equal_payment" ? "等额本息" : value === "equal_principal" ? "等额本金" : "待补充";
+}
 async function scrollToBottom() {
   await nextTick();
   if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight;
@@ -34,6 +41,7 @@ async function loadHistory() {
     messages.value = await apiClient.listChatMessages();
     const lastAssistant = [...messages.value].reverse().find((item) => item.role === "assistant");
     pendingContext.value = lastAssistant?.parsed?.follow_up_fields.length ? lastAssistant.parsed : null;
+    pendingLoan.value = lastAssistant?.parsed_loan && (lastAssistant.parsed_loan.follow_up_fields.length || lastAssistant.parsed_loan.awaiting_confirmation) ? lastAssistant.parsed_loan : null;
     await scrollToBottom();
   } finally { loading.value = false; }
 }
@@ -42,8 +50,14 @@ async function clearHistory() {
   await apiClient.clearChatMessages();
   messages.value = [];
   pendingContext.value = null;
+  pendingLoan.value = null;
 }
 function cancelFollowUp() {
+  if (pendingLoan.value) {
+    message.value = "取消";
+    void submit();
+    return;
+  }
   pendingContext.value = null;
   messages.value.push({ id: Date.now(), role: "assistant", content: "已取消补充这笔账，你可以重新说一笔。", recorded: false, created_at: new Date().toISOString() });
   void scrollToBottom();
@@ -51,51 +65,24 @@ function cancelFollowUp() {
 async function submit() {
   const text = message.value.trim();
   if (!text || busy.value) return;
-  if (isLoanMessage(text)) {
-    message.value = "";
-    emit("loanDetected", parseLoanDraft(text));
-    return;
-  }
   message.value = "";
   busy.value = true;
   messages.value.push({ id: Date.now(), role: "user", content: text, recorded: false, created_at: new Date().toISOString() });
   await scrollToBottom();
   try {
-    const result = await apiClient.recordFromChat(text, pendingContext.value);
+    const result = await apiClient.recordFromChat(text, pendingContext.value, pendingLoan.value);
     if (result.entry) emit("entryCreated", result.entry);
-    pendingContext.value = result.needs_follow_up ? result.parsed : null;
-    messages.value.push({ id: Date.now() + 1, role: "assistant", content: result.reply, parsed: result.parsed, recorded: Boolean(result.entry), created_at: new Date().toISOString() });
+    pendingContext.value = result.needs_follow_up ? result.parsed ?? null : null;
+    pendingLoan.value = result.needs_follow_up ? result.parsed_loan ?? null : null;
+    messages.value.push({ id: Date.now() + 1, role: "assistant", content: result.reply, parsed: result.parsed, parsed_loan: result.parsed_loan, recorded: Boolean(result.entry || result.loan_id), created_at: new Date().toISOString() });
   } catch (err) {
     messages.value.push({ id: Date.now() + 1, role: "assistant", content: err instanceof Error ? err.message : "记账失败，请稍后再试。", recorded: false, created_at: new Date().toISOString() });
   } finally { busy.value = false; await scrollToBottom(); }
 }
 
-function isLoanMessage(text: string) {
-  return !/借给|借出/.test(text) && /(借了|借款|借到|贷款|贷了|从.+借|向.+借)/.test(text);
-}
-
-function parseLoanDraft(text: string): LoanDraft {
-  const draft: LoanDraft = { borrowed_at: new Date().toLocaleDateString("en-CA"), note: `来自 AI 记账输入：${text}` };
-  const amountMatch = text.match(/(?:借了?|借款|贷款|贷了?|金额)[^\d]{0,8}([\d,.]+)\s*(万|千)?(?:元)?/)
-    ?? text.match(/([\d,.]+)\s*(万|千)?元/);
-  if (amountMatch) {
-    const multiplier = amountMatch[2] === "万" ? 10000 : amountMatch[2] === "千" ? 1000 : 1;
-    draft.principal = String(Number(amountMatch[1].replace(/,/g, "")) * multiplier);
-  }
-  const creditorMatch = text.match(/(?:从|向)(.+?)(?:借了|借款|借到|贷款|贷了|借)/);
-  if (creditorMatch) draft.creditor = creditorMatch[1].trim();
-  const monthsMatch = text.match(/(\d+)\s*(?:个)?月/);
-  const yearsMatch = text.match(/(\d+(?:\.\d+)?)\s*年/);
-  if (monthsMatch) draft.repayment_months = Number(monthsMatch[1]);
-  else if (yearsMatch) draft.repayment_months = Math.round(Number(yearsMatch[1]) * 12);
-  const rateMatch = text.match(/(?:年利率|利率)\s*(\d+(?:\.\d+)?)\s*%/);
-  if (rateMatch) draft.annual_rate = rateMatch[1];
-  if (/昨天/.test(text)) {
-    const date = new Date(); date.setDate(date.getDate() - 1); draft.borrowed_at = date.toLocaleDateString("en-CA");
-  }
-  const dateMatch = text.match(/(20\d{2})[年/-](\d{1,2})[月/-](\d{1,2})日?/);
-  if (dateMatch) draft.borrowed_at = `${dateMatch[1]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[3].padStart(2, "0")}`;
-  return draft;
+function confirmLoan() {
+  message.value = "确认";
+  void submit();
 }
 
 watch(() => props.ledgerId, () => void loadHistory(), { immediate: true });
@@ -146,6 +133,19 @@ watch(() => props.ledgerId, () => void loadHistory(), { immediate: true });
                 </dl>
                 <p v-if="item.parsed.follow_up_fields.length">待补字段：{{ item.parsed.follow_up_fields.map(fieldLabel).join("、") }}</p>
               </div>
+              <div v-if="item.parsed_loan" class="parse-card loan-parse-card">
+                <div class="parse-card-title"><strong>{{ item.recorded ? "借款已入库" : item.parsed_loan.awaiting_confirmation ? "等待确认" : "正在收集借款信息" }}</strong><span>置信度 {{ Math.round(item.parsed_loan.confidence * 100) }}%</span></div>
+                <dl>
+                  <div><dt>本金</dt><dd>{{ item.parsed_loan.principal ? `¥${item.parsed_loan.principal}` : "待补充" }}</dd></div>
+                  <div><dt>出借方</dt><dd>{{ item.parsed_loan.creditor || "待补充" }}</dd></div>
+                  <div><dt>借款日期</dt><dd>{{ item.parsed_loan.borrowed_at || "待补充" }}</dd></div>
+                  <div><dt>还款期数</dt><dd>{{ item.parsed_loan.repayment_months ? `${item.parsed_loan.repayment_months} 期` : "待补充" }}</dd></div>
+                  <div><dt>年利率</dt><dd>{{ item.parsed_loan.annual_rate != null ? `${item.parsed_loan.annual_rate}%` : "待补充" }}</dd></div>
+                  <div><dt>还款方式</dt><dd>{{ repaymentMethod(item.parsed_loan.repayment_method) }}</dd></div>
+                  <div><dt>首次还款日</dt><dd>{{ item.parsed_loan.first_payment_date || "待补充" }}</dd></div>
+                </dl>
+                <p v-if="item.parsed_loan.follow_up_fields.length">待补字段：{{ item.parsed_loan.follow_up_fields.map(loanFieldLabel).join("、") }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -155,8 +155,8 @@ watch(() => props.ledgerId, () => void loadHistory(), { immediate: true });
         </div>
       </div>
       <form class="composer" @submit.prevent="submit">
-        <div v-if="pendingContext" class="pending-context"><span>正在补充上一笔：{{ pendingContext.follow_up_fields.map(fieldLabel).join("、") }}</span><button type="button" class="cancel-follow-up" @click="cancelFollowUp">取消</button></div>
-        <input v-model="message" :placeholder="pendingContext ? '补充缺少的信息，例如：23 元' : '输入消费或收入，例如：打车 23 元'" />
+        <div v-if="pendingContext || pendingLoan" class="pending-context"><span>{{ pendingLoan?.awaiting_confirmation ? '借款信息已完整，请确认或直接输入修改内容' : `正在补充上一笔：${pendingLoan ? pendingLoan.follow_up_fields.map(loanFieldLabel).join('、') : pendingContext?.follow_up_fields.map(fieldLabel).join('、')}` }}</span><div class="pending-actions"><button v-if="pendingLoan?.awaiting_confirmation" type="button" class="confirm-loan-button" :disabled="busy" @click="confirmLoan">确认入库</button><button type="button" class="cancel-follow-up" @click="cancelFollowUp">取消</button></div></div>
+        <input v-model="message" :placeholder="pendingLoan?.awaiting_confirmation ? '如需修改，直接说：利率改成 3.5%' : pendingLoan ? (pendingLoan.follow_up_question || '补充借款信息') : pendingContext ? '补充缺少的信息，例如：23 元' : '输入消费、收入或借款，例如：今天从某平台借了 5000 元'" />
         <button type="submit" :disabled="busy || !message.trim()" title="发送"><SendHorizontal :size="18" /></button>
       </form>
     </div>

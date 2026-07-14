@@ -1,4 +1,4 @@
-import type { AssistantPersona, Budget, ChatMessage, ChatRecordResponse, Entry, EntryUpdate, Ledger, LedgerMember, LedgerType, Loan, LoanCreate, LoginResponse, MonthlySummary, ParsedTransaction, PeriodAnalysis, User } from "../types";
+import type { AssistantPersona, Budget, ChatMessage, ChatRecordResponse, Entry, EntryUpdate, Ledger, LedgerMember, LedgerType, Loan, LoanCreate, LoginResponse, MonthlySummary, ParsedLoan, ParsedTransaction, PeriodAnalysis, User } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 let context: { userId?: number; ledgerId?: number; token?: string } = {};
@@ -31,7 +31,7 @@ export const apiClient = {
   listEntries: () => request<Entry[]>("/entries"),
   updateEntry: (id: number, payload: EntryUpdate) => request<Entry>(`/entries/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteEntry: (id: number) => request<void>(`/entries/${id}`, { method: "DELETE" }),
-  recordFromChat: (message: string, pendingContext?: ParsedTransaction | null) => request<ChatRecordResponse>("/chat/record", { method: "POST", body: JSON.stringify({ message, pending_context: pendingContext || null }) }),
+  recordFromChat: (message: string, pendingContext?: ParsedTransaction | null, pendingLoan?: ParsedLoan | null) => request<ChatRecordResponse>("/chat/record", { method: "POST", body: JSON.stringify({ message, pending_context: pendingContext || null, pending_loan: pendingLoan || null }) }),
   listChatMessages: () => request<ChatMessage[]>("/chat/messages"),
   clearChatMessages: () => request<void>("/chat/messages", { method: "DELETE" }),
   uploadAvatar: (file: File) => { const body = new FormData(); body.append("file", file); return request<{ url: string }>("/uploads/avatar", { method: "POST", body }); },
