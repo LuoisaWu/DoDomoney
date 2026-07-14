@@ -11,13 +11,19 @@ class LlmError(RuntimeError):
 
 
 class LlmClient:
-    def complete_json(self, *, system_prompt: str, user_prompt: str) -> dict[str, Any]:
+    def complete_json(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.1,
+    ) -> dict[str, Any]:
         if not settings.llm_api_key and "localhost" not in settings.llm_base_url and "127.0.0.1" not in settings.llm_base_url:
             raise LlmError("尚未配置 LLM。请设置 DODOMONEY_LLM_API_KEY 后重启后端。")
 
         payload = {
             "model": settings.llm_model,
-            "temperature": 0.1,
+            "temperature": temperature,
             "response_format": {"type": "json_object"},
             "messages": [
                 {"role": "system", "content": system_prompt},

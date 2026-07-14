@@ -39,7 +39,17 @@ def record_from_chat(
     chat_repository.add_message(context.ledger.id, context.user.id, "user", payload.message)
     try:
         parsed = ai_parser.parse(payload.message, payload.pending_context)
-        reply = reply_service.build_reply(parsed, persona)
+        recent_replies = [
+            message.content
+            for message in chat_repository.list_messages(context.ledger.id, context.user.id, 10)
+            if message.role == "assistant"
+        ]
+        reply = reply_service.build_reply(
+            parsed,
+            persona,
+            original_message=payload.message,
+            recent_replies=recent_replies,
+        )
     except LlmError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 

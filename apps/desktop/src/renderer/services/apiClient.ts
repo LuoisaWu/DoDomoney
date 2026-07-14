@@ -36,7 +36,7 @@ export const apiClient = {
   clearChatMessages: () => request<void>("/chat/messages", { method: "DELETE" }),
   uploadAvatar: (file: File) => { const body = new FormData(); body.append("file", file); return request<{ url: string }>("/uploads/avatar", { method: "POST", body }); },
   getPersona: () => request<AssistantPersona>("/users/me/persona"),
-  updatePersona: (persona: Pick<AssistantPersona, "assistant_name" | "avatar" | "voice_style" | "snark_level" | "mode" | "reply_length" | "emoji_level" | "proactive_insights" | "custom_instructions">) => request<AssistantPersona>("/users/me/persona", { method: "PUT", body: JSON.stringify(persona) }),
+  updatePersona: (persona: Pick<AssistantPersona, "assistant_name" | "avatar" | "voice_style" | "mode" | "reply_length" | "emoji_level" | "proactive_insights" | "custom_instructions">) => request<AssistantPersona>("/users/me/persona", { method: "PUT", body: JSON.stringify(persona) }),
   summary: (month: string) => request<MonthlySummary>(`/entries/summary?month=${month}`),
   analyze: (startDate: string, endDate: string, includeAi = false) => request<PeriodAnalysis>(`/entries/analysis?start_date=${startDate}&end_date=${endDate}&include_ai=${includeAi}`),
   listBudgets: () => request<Budget[]>("/budgets"),

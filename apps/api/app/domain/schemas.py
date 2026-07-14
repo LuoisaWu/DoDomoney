@@ -134,7 +134,6 @@ class AssistantPersonaBase(BaseModel):
     assistant_name: str = Field(default="账小喵", min_length=1, max_length=40)
     avatar: str = Field(default="🐱", min_length=1, max_length=500)
     voice_style: VoiceStyle = VoiceStyle.WARM
-    snark_level: int = Field(default=1, ge=0, le=5)
     mode: PersonaMode = PersonaMode.CUTE
     reply_length: Literal["short", "medium", "detailed"] = "short"
     emoji_level: int = Field(default=1, ge=0, le=3)

@@ -1,5 +1,5 @@
 export type EntryType = "expense" | "income";
-export type PersonaMode = "balanced" | "cute" | "rational" | "encouraging";
+export type PersonaMode = "balanced" | "cute" | "rational" | "encouraging" | "witty_dark";
 export type VoiceStyle = "warm" | "playful" | "direct" | "calm";
 export type ReplyLength = "short" | "medium" | "detailed";
 export type LedgerType = "personal" | "family" | "shared";
@@ -35,7 +35,7 @@ export interface ParsedTransaction {
 }
 export interface AssistantPersona {
   user_id: number; assistant_name: string; avatar: string; voice_style: VoiceStyle;
-  snark_level: number; mode: PersonaMode; reply_length: ReplyLength; emoji_level: number;
+  mode: PersonaMode; reply_length: ReplyLength; emoji_level: number;
   proactive_insights: boolean; custom_instructions: string; created_at: string; updated_at: string;
 }
 export interface ChatRecordResponse { assistant_name: string; assistant_avatar: string; reply: string; entry?: Entry | null; parsed: ParsedTransaction; needs_follow_up: boolean; }

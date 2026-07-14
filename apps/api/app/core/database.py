@@ -44,6 +44,54 @@ def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
     return any(row["name"] == column for row in rows)
 
 
+def _upgrade_persona_schema(conn: sqlite3.Connection) -> None:
+    """Remove the legacy snark slider and allow the distinct witty-dark mode."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'assistant_personas'"
+    ).fetchone()
+    table_sql = row["sql"] if row else ""
+    if "snark_level" not in table_sql and "witty_dark" in table_sql:
+        return
+
+    has_snark_level = _has_column(conn, "assistant_personas", "snark_level")
+    migrated_mode = (
+        "CASE WHEN snark_level >= 4 THEN 'witty_dark' ELSE mode END"
+        if has_snark_level
+        else "mode"
+    )
+    conn.execute("ALTER TABLE assistant_personas RENAME TO assistant_personas_legacy")
+    conn.execute(
+        """
+        CREATE TABLE assistant_personas (
+            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            assistant_name TEXT NOT NULL DEFAULT '账小喵',
+            avatar TEXT NOT NULL DEFAULT '🐱',
+            voice_style TEXT NOT NULL CHECK (voice_style IN ('warm', 'playful', 'direct', 'calm')) DEFAULT 'warm',
+            mode TEXT NOT NULL CHECK (mode IN ('balanced', 'cute', 'rational', 'encouraging', 'witty_dark')) DEFAULT 'cute',
+            reply_length TEXT NOT NULL DEFAULT 'short',
+            emoji_level INTEGER NOT NULL DEFAULT 1,
+            proactive_insights INTEGER NOT NULL DEFAULT 1,
+            custom_instructions TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        f"""
+        INSERT INTO assistant_personas (
+            user_id, assistant_name, avatar, voice_style, mode, reply_length,
+            emoji_level, proactive_insights, custom_instructions, created_at, updated_at
+        )
+        SELECT
+            user_id, assistant_name, avatar, voice_style, {migrated_mode}, reply_length,
+            emoji_level, proactive_insights, custom_instructions, created_at, updated_at
+        FROM assistant_personas_legacy
+        """
+    )
+    conn.execute("DROP TABLE assistant_personas_legacy")
+
+
 def _migrate_existing_database(conn: sqlite3.Connection) -> None:
     if not _has_column(conn, "users", "password_hash"):
         conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
@@ -75,8 +123,7 @@ def _migrate_existing_database(conn: sqlite3.Connection) -> None:
             assistant_name TEXT NOT NULL DEFAULT '账小喵',
             avatar TEXT NOT NULL DEFAULT '🐱',
             voice_style TEXT NOT NULL CHECK (voice_style IN ('warm', 'playful', 'direct', 'calm')) DEFAULT 'warm',
-            snark_level INTEGER NOT NULL CHECK (snark_level BETWEEN 0 AND 5) DEFAULT 1,
-            mode TEXT NOT NULL CHECK (mode IN ('balanced', 'cute', 'rational', 'encouraging')) DEFAULT 'cute',
+            mode TEXT NOT NULL CHECK (mode IN ('balanced', 'cute', 'rational', 'encouraging', 'witty_dark')) DEFAULT 'cute',
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
@@ -93,6 +140,7 @@ def _migrate_existing_database(conn: sqlite3.Connection) -> None:
     for column, definition in persona_columns.items():
         if not _has_column(conn, "assistant_personas", column):
             conn.execute(f"ALTER TABLE assistant_personas ADD COLUMN {column} {definition}")
+    _upgrade_persona_schema(conn)
 
     conn.execute(
         """

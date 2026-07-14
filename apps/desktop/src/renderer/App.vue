@@ -34,7 +34,6 @@ const persona = ref<AssistantPersona>({
   assistant_name: "账小喵",
   avatar: "猫",
   voice_style: "warm",
-  snark_level: 1,
   mode: "cute",
   reply_length: "short",
   emoji_level: 1,

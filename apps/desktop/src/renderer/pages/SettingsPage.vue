@@ -18,10 +18,11 @@ watch(() => props.persona, (value) => Object.assign(draft, value), { deep: true 
 watch(() => props.user, (value) => { if (value) Object.assign(userDraft, { display_name: value.display_name, avatar_url: value.avatar_url ?? "" }); }, { deep: true });
 
 const modeOptions: Array<{ value: PersonaMode; label: string; hint: string }> = [
-  { value: "balanced", label: "均衡伙伴", hint: "在清晰分析和日常陪伴之间自然切换" },
-  { value: "cute", label: "可爱小喵", hint: "轻松活泼，带一点小猫式表达" },
-  { value: "rational", label: "理性顾问", hint: "关注数字、趋势和消费判断" },
-  { value: "encouraging", label: "鼓励教练", hint: "温柔正向，帮助你持续记账" }
+  { value: "balanced", label: "均衡伙伴", hint: "清醒自然、有分寸，在准确确认和轻松陪伴之间灵活切换。" },
+  { value: "cute", label: "可爱小喵", hint: "灵动、有猫感和小巧想象，不会只靠卖萌或固定口头禅。" },
+  { value: "rational", label: "理性顾问", hint: "冷静敏锐、重视数字与消费含义，表达简洁且有判断力。" },
+  { value: "encouraging", label: "鼓励教练", hint: "温柔坚定，给出具体认可，不说空泛的鸡汤。" },
+  { value: "witty_dark", label: "幽默腹黑", hint: "聪明机灵地调侃具体消费，让钱包受点委屈，但不给你制造羞耻。" }
 ];
 const voiceOptions: Array<{ value: VoiceStyle; label: string }> = [
   { value: "warm", label: "温暖亲切" }, { value: "playful", label: "活泼俏皮" },
@@ -84,7 +85,6 @@ async function save() {
       </div>
       <p class="settings-hint">{{ modeOptions.find((option) => option.value === draft.mode)?.hint }}</p>
       <div class="range-grid">
-        <label class="range-label"><span>吐槽程度 <strong>{{ draft.snark_level }}/5</strong></span><input v-model.number="draft.snark_level" type="range" min="0" max="5" step="1" /></label>
         <label class="range-label"><span>表情用量 <strong>{{ draft.emoji_level }}/3</strong></span><input v-model.number="draft.emoji_level" type="range" min="0" max="3" step="1" /></label>
       </div>
       <label class="custom-instructions">专属要求<textarea v-model.trim="draft.custom_instructions" maxlength="500" rows="3" placeholder="例如：称呼我为老板；不要使用网络流行语；每周提醒我复盘餐饮开销。"></textarea><small>{{ draft.custom_instructions.length }}/500</small></label>

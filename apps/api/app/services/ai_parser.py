@@ -1,6 +1,4 @@
 import json
-import re
-from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 
 from pydantic import ValidationError
@@ -19,9 +17,6 @@ class AiParser:
         # China Standard Time has no daylight-saving transitions. A fixed
         # offset avoids requiring the optional IANA tzdata package on Windows.
         now = datetime.now(timezone(timedelta(hours=8), name="Asia/Shanghai"))
-        fast_result = self._fast_parse(message, pending_context, now)
-        if fast_result is not None:
-            return fast_result
         context = pending_context.model_dump(mode="json") if pending_context else None
         system_prompt = f"""
 你是 Dodomoney 的记账语义解析器。当前时间是 {now.isoformat()}，时区 Asia/Shanghai。
@@ -58,66 +53,3 @@ follow_up_question（需要补充时的一句中文问题，否则 null）、des
         if set(missing) != set(result.follow_up_fields):
             result = result.model_copy(update={"follow_up_fields": missing})
         return result
-
-    @staticmethod
-    def _fast_parse(
-        message: str,
-        pending_context: ParsedTransaction | None,
-        now: datetime,
-    ) -> ParsedTransaction | None:
-        """Handle common one-line bookkeeping locally, avoiding network latency."""
-        text = message.strip()
-        amount_match = re.search(r"(?:¥|￥)?\s*(\d+(?:\.\d{1,2})?)\s*(?:元|块|块钱|¥|￥)", text, re.I)
-        if amount_match is None and pending_context is not None:
-            amount_match = re.fullmatch(r"\s*(\d+(?:\.\d{1,2})?)\s*", text)
-
-        income_words = ("工资", "奖金", "报销", "兼职", "收款", "到账", "收入", "赚了", "红包")
-        categories = {
-            "餐饮": ("早餐", "午饭", "午餐", "晚饭", "晚餐", "吃饭", "外卖", "咖啡", "奶茶", "餐厅"),
-            "交通出行": ("打车", "出租车", "地铁", "公交", "高铁", "火车", "机票", "加油", "停车"),
-            "购物": ("购物", "衣服", "鞋", "淘宝", "京东", "超市", "日用品"),
-            "娱乐": ("电影", "游戏", "唱歌", "演出", "娱乐"),
-            "学习办公": ("书", "课程", "培训", "文具", "办公"),
-            "健康": ("医院", "看病", "药", "体检", "健身"),
-            "工资": ("工资", "奖金"),
-            "兼职": ("兼职",),
-            "其他收入": ("报销", "收款", "到账", "收入", "赚了", "红包"),
-        }
-        detected_category = next(
-            (category for category, words in categories.items() if any(word in text for word in words)),
-            None,
-        )
-        detected_type = "income" if any(word in text for word in income_words) else ("expense" if detected_category else None)
-
-        base = pending_context.model_dump() if pending_context else {}
-        amount = Decimal(amount_match.group(1)) if amount_match else base.get("amount")
-        category = detected_category or base.get("category")
-        entry_type = detected_type or base.get("type")
-        occurred_at = base.get("occurred_at") or now
-        if "昨天" in text:
-            occurred_at = now - timedelta(days=1)
-        elif "前天" in text:
-            occurred_at = now - timedelta(days=2)
-
-        # Let the model handle ambiguous messages; the local path is intentionally conservative.
-        if amount is None or (category is None and pending_context is None):
-            return None
-        missing = [
-            field for field, value in (
-                ("amount", amount), ("category", category), ("occurred_at", occurred_at), ("type", entry_type)
-            ) if value is None
-        ]
-        question = None
-        if missing:
-            question = {"category": "这笔钱主要花在什么地方？", "type": "这是收入还是支出？"}.get(missing[0])
-        return ParsedTransaction(
-            amount=amount,
-            category=category,
-            occurred_at=occurred_at,
-            type=entry_type,
-            confidence=0.96 if not missing else 0.8,
-            follow_up_fields=missing,
-            follow_up_question=question,
-            description=text if pending_context is None else (base.get("description") or text),
-            subcategory=base.get("subcategory"),
-        )

@@ -19,6 +19,7 @@ class PersonaMode(StrEnum):
     CUTE = "cute"
     RATIONAL = "rational"
     ENCOURAGING = "encouraging"
+    WITTY_DARK = "witty_dark"
 
 
 class VoiceStyle(StrEnum):

@@ -12,7 +12,6 @@ def _row_to_persona(row: Any) -> AssistantPersonaRead:
         assistant_name=row["assistant_name"],
         avatar=row["avatar"],
         voice_style=VoiceStyle(row["voice_style"]),
-        snark_level=row["snark_level"],
         mode=PersonaMode(row["mode"]),
         reply_length=row["reply_length"],
         emoji_level=row["emoji_level"],
@@ -38,7 +37,7 @@ class PersonaRepository:
             conn.execute(
                 """
                 UPDATE assistant_personas
-                SET assistant_name = ?, avatar = ?, voice_style = ?, snark_level = ?, mode = ?,
+                SET assistant_name = ?, avatar = ?, voice_style = ?, mode = ?,
                     reply_length = ?, emoji_level = ?, proactive_insights = ?, custom_instructions = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
@@ -47,7 +46,6 @@ class PersonaRepository:
                     payload.assistant_name.strip(),
                     payload.avatar.strip(),
                     payload.voice_style.value,
-                    payload.snark_level,
                     payload.mode.value,
                     payload.reply_length,
                     payload.emoji_level,
