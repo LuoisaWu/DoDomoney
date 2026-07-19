@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from app.api.routes import auth, budgets, chat, entries, health, ledgers, loans, uploads, users
+from app.api.routes import auth, budgets, chat, entries, health, ledgers, loans, reimbursements, uploads, users
 from app.api.routes.uploads import UPLOAD_DIR
 from app.core.config import settings
 from app.core.database import initialize_database
@@ -37,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(entries.router, prefix="/entries", tags=["entries"])
     app.include_router(budgets.router, prefix="/budgets", tags=["budgets"])
     app.include_router(loans.router, prefix="/loans", tags=["loans"])
+    app.include_router(reimbursements.router, prefix="/reimbursements", tags=["reimbursements"])
     app.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
     return app
 

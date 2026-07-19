@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Camera, UserRound } from "lucide-vue-next";
 import { computed, reactive, ref, watch } from "vue";
-import { apiClient } from "../services/apiClient";
+import { apiClient, resolveMediaUrl } from "../services/apiClient";
 import type { AssistantPersona, PersonaMode, ReplyLength, User, VoiceStyle } from "../types";
 
 const props = defineProps<{ persona: AssistantPersona; user: User | null }>();
@@ -12,7 +12,7 @@ const saving = ref(false);
 const uploading = ref<"assistant" | "user" | null>(null);
 const saved = ref(false);
 const error = ref<string | null>(null);
-const avatarIsUrl = computed(() => /^(https?:\/\/|data:image\/)/.test(draft.avatar));
+const avatarIsUrl = computed(() => /^(https?:\/\/|\/media\/|data:image\/)/.test(draft.avatar));
 
 watch(() => props.persona, (value) => Object.assign(draft, value), { deep: true });
 watch(() => props.user, (value) => { if (value) Object.assign(userDraft, { display_name: value.display_name, avatar_url: value.avatar_url ?? "" }); }, { deep: true });
@@ -62,7 +62,7 @@ async function save() {
     <form class="settings-panel persona-form" @submit.prevent="save">
       <h2 class="settings-section-title">你的资料</h2>
       <div class="profile-row">
-        <div class="avatar persona-avatar user-avatar"><img v-if="userDraft.avatar_url" :src="userDraft.avatar_url" alt="用户头像" /><UserRound v-else :size="24" /></div>
+        <div class="avatar persona-avatar user-avatar"><img v-if="userDraft.avatar_url" :src="resolveMediaUrl(userDraft.avatar_url)" alt="用户头像" /><UserRound v-else :size="24" /></div>
         <label class="upload-button"><Camera :size="16" />{{ uploading === "user" ? "上传中..." : "上传用户照片" }}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="Boolean(uploading)" @change="upload($event, 'user')" /></label>
         <label class="grow-label">显示名称<input v-model.trim="userDraft.display_name" maxlength="80" required /></label>
       </div>
@@ -70,7 +70,7 @@ async function save() {
       <div class="settings-divider"></div>
       <h2 class="settings-section-title">助手形象</h2>
       <div class="profile-row">
-        <div class="avatar persona-avatar"><img v-if="avatarIsUrl" :src="draft.avatar" alt="助手头像" /><span v-else>{{ draft.avatar || "🐱" }}</span></div>
+        <div class="avatar persona-avatar"><img v-if="avatarIsUrl" :src="resolveMediaUrl(draft.avatar)" alt="助手头像" /><span v-else>{{ draft.avatar || "🐱" }}</span></div>
         <label class="upload-button"><Camera :size="16" />{{ uploading === "assistant" ? "上传中..." : "上传账小喵照片" }}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" :disabled="Boolean(uploading)" @change="upload($event, 'assistant')" /></label>
         <label class="grow-label">助手名称<input v-model.trim="draft.assistant_name" maxlength="40" required /></label>
       </div>

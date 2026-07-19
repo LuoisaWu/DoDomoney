@@ -194,3 +194,29 @@ def _migrate_existing_database(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_loans_ledger_borrowed_at ON loans (ledger_id, borrowed_at DESC)"
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS reimbursements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ledger_id INTEGER NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+            merchant TEXT NOT NULL,
+            invoice_title TEXT NOT NULL DEFAULT '',
+            amount TEXT NOT NULL,
+            invoice_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            invoice_number TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL CHECK (status IN ('pending', 'submitted', 'reimbursed')) DEFAULT 'pending',
+            note TEXT NOT NULL DEFAULT '',
+            image_url TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_reimbursements_ledger_invoice_date ON reimbursements (ledger_id, invoice_date DESC)"
+    )
+    if not _has_column(conn, "chat_messages", "image_url"):
+        conn.execute("ALTER TABLE chat_messages ADD COLUMN image_url TEXT")
+    if not _has_column(conn, "reimbursements", "invoice_title"):
+        conn.execute("ALTER TABLE reimbursements ADD COLUMN invoice_title TEXT NOT NULL DEFAULT ''")

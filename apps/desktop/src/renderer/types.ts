@@ -32,10 +32,33 @@ export interface ParsedTransaction {
   description?: string | null; occurred_at?: string | null; confidence: number;
   follow_up_fields: Array<"amount" | "category" | "occurred_at" | "type">;
   follow_up_question?: string | null;
+  target_ledger_id?: number | null; target_ledger_name?: string | null;
 }
 export type LoanFollowUpField = "creditor" | "borrowed_at" | "principal" | "repayment_months" | "annual_rate" | "repayment_method" | "first_payment_date";
 export interface ParsedLoan extends LoanDraft {
   confidence: number; follow_up_fields: LoanFollowUpField[]; follow_up_question?: string | null; awaiting_confirmation: boolean;
+  target_ledger_id?: number | null; target_ledger_name?: string | null;
+}
+export type ReimbursementStatus = "pending" | "submitted" | "reimbursed";
+export type ReimbursementFollowUpField = "merchant" | "amount" | "invoice_date" | "category";
+export interface ReimbursementDraft {
+  merchant?: string; invoice_title?: string; amount?: string; invoice_date?: string; category?: string; invoice_number?: string;
+  status?: ReimbursementStatus; note?: string; image_url?: string | null;
+}
+export interface ParsedReimbursement extends ReimbursementDraft {
+  confidence: number; follow_up_fields: ReimbursementFollowUpField[];
+  follow_up_question?: string | null; awaiting_confirmation: boolean;
+  target_ledger_id?: number | null; target_ledger_name?: string | null;
+}
+export interface Reimbursement {
+  id: number; ledger_id: number; merchant: string; invoice_title: string; amount: string; invoice_date: string; category: string;
+  invoice_number: string; status: ReimbursementStatus; note: string; image_url?: string | null;
+  created_at: string; updated_at: string;
+}
+export type ReimbursementCreate = Required<Omit<ReimbursementDraft, "image_url">> & { image_url?: string | null };
+export interface DocumentOcrContext {
+  image_url: string; extracted_text: string; document_type: "invoice" | "loan_note" | "repayment" | "unknown";
+  confidence: number; status: "completed" | "pending_provider"; provider_configured: boolean; message: string;
 }
 export interface AssistantPersona {
   user_id: number; assistant_name: string; avatar: string; voice_style: VoiceStyle;
@@ -43,10 +66,11 @@ export interface AssistantPersona {
   proactive_insights: boolean; custom_instructions: string; created_at: string; updated_at: string;
 }
 export interface ChatRecordResponse {
-  assistant_name: string; assistant_avatar: string; reply: string; entry?: Entry | null; loan_id?: number | null;
-  record_type: "transaction" | "loan"; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null; needs_follow_up: boolean;
+  assistant_name: string; assistant_avatar: string; reply: string; entry?: Entry | null; loan_id?: number | null; reimbursement_id?: number | null;
+  record_type: "transaction" | "loan" | "reimbursement"; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null;
+  parsed_reimbursement?: ParsedReimbursement | null; needs_follow_up: boolean;
 }
-export interface ChatMessage { id: number; role: "user" | "assistant"; content: string; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null; recorded: boolean; created_at: string; }
+export interface ChatMessage { id: number; role: "user" | "assistant"; content: string; parsed?: ParsedTransaction | null; parsed_loan?: ParsedLoan | null; parsed_reimbursement?: ParsedReimbursement | null; image_url?: string | null; recorded: boolean; created_at: string; }
 export interface Budget { id: number; ledger_id: number; month: string; amount: string; category?: string | null; created_at: string; }
 export interface CategorySummary { category: string; amount: string; percentage: number; }
 export interface MonthlySummary { month: string; expense_total: string; income_total: string; balance: string; entry_count: number; categories: CategorySummary[]; }

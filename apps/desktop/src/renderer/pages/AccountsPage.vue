@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { BookOpen, Plus, RefreshCw, UserPlus } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
-import { apiClient } from "../services/apiClient";
+import { apiClient, resolveMediaUrl } from "../services/apiClient";
 import type { Ledger, LedgerMember, LedgerType, User } from "../types";
 
 const props = defineProps<{
@@ -89,7 +89,7 @@ watch(() => props.activeLedgerId, () => {
     <header class="page-header">
       <div class="account-heading">
         <div class="account-avatar">
-          <img v-if="user.avatar_url" :src="user.avatar_url" alt="用户头像" />
+          <img v-if="user.avatar_url" :src="resolveMediaUrl(user.avatar_url)" alt="用户头像" />
           <span v-else>{{ user.display_name.slice(0, 1) }}</span>
         </div>
         <div>

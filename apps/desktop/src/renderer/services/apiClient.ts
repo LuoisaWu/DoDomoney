@@ -1,9 +1,15 @@
-import type { AssistantPersona, Budget, ChatMessage, ChatRecordResponse, Entry, EntryUpdate, Ledger, LedgerMember, LedgerType, Loan, LoanCreate, LoginResponse, MonthlySummary, ParsedLoan, ParsedTransaction, PeriodAnalysis, User } from "../types";
+import type { AssistantPersona, Budget, ChatMessage, ChatRecordResponse, DocumentOcrContext, Entry, EntryUpdate, Ledger, LedgerMember, LedgerType, Loan, LoanCreate, LoginResponse, MonthlySummary, ParsedLoan, ParsedReimbursement, ParsedTransaction, PeriodAnalysis, Reimbursement, ReimbursementCreate, User } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 let context: { userId?: number; ledgerId?: number; token?: string } = {};
 
 export function setApiContext(next: { userId?: number; ledgerId?: number; token?: string }) { context = next; }
+export function resolveMediaUrl(value?: string | null): string {
+  if (!value || value.startsWith("data:image/")) return value ?? "";
+  const mediaIndex = value.indexOf("/media/");
+  if (mediaIndex >= 0) return `${API_BASE_URL}${value.slice(mediaIndex)}`;
+  return value;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> | undefined) };
@@ -18,8 +24,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const apiClient = {
+  sendVerificationCode: (email: string) => request<{ message: string; retry_after: number; expires_in: number; development_code?: string }>("/auth/verification-code", { method: "POST", body: JSON.stringify({ email }) }),
   login: (email: string, password: string) => request<LoginResponse>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
-  register: (email: string, displayName: string, password: string) => request<LoginResponse>("/auth/register", { method: "POST", body: JSON.stringify({ email, display_name: displayName, password }) }),
+  register: (email: string, displayName: string, password: string, verificationCode: string) => request<LoginResponse>("/auth/register", { method: "POST", body: JSON.stringify({ email, display_name: displayName, password, verification_code: verificationCode }) }),
   restoreSession: () => request<LoginResponse>("/auth/session"),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   listUsers: () => request<User[]>("/users"),
@@ -31,10 +38,11 @@ export const apiClient = {
   listEntries: () => request<Entry[]>("/entries"),
   updateEntry: (id: number, payload: EntryUpdate) => request<Entry>(`/entries/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteEntry: (id: number) => request<void>(`/entries/${id}`, { method: "DELETE" }),
-  recordFromChat: (message: string, pendingContext?: ParsedTransaction | null, pendingLoan?: ParsedLoan | null) => request<ChatRecordResponse>("/chat/record", { method: "POST", body: JSON.stringify({ message, pending_context: pendingContext || null, pending_loan: pendingLoan || null }) }),
+  recordFromChat: (message: string, pendingContext?: ParsedTransaction | null, pendingLoan?: ParsedLoan | null, pendingReimbursement?: ParsedReimbursement | null, imageContext?: DocumentOcrContext | null) => request<ChatRecordResponse>("/chat/record", { method: "POST", body: JSON.stringify({ message, pending_context: pendingContext || null, pending_loan: pendingLoan || null, pending_reimbursement: pendingReimbursement || null, image_context: imageContext || null }) }),
   listChatMessages: () => request<ChatMessage[]>("/chat/messages"),
   clearChatMessages: () => request<void>("/chat/messages", { method: "DELETE" }),
   uploadAvatar: (file: File) => { const body = new FormData(); body.append("file", file); return request<{ url: string }>("/uploads/avatar", { method: "POST", body }); },
+  uploadDocument: (file: File) => { const body = new FormData(); body.append("file", file); return request<DocumentOcrContext>("/uploads/document-ocr?analyze=false", { method: "POST", body }); },
   getPersona: () => request<AssistantPersona>("/users/me/persona"),
   updatePersona: (persona: Pick<AssistantPersona, "assistant_name" | "avatar" | "voice_style" | "mode" | "reply_length" | "emoji_level" | "proactive_insights" | "custom_instructions">) => request<AssistantPersona>("/users/me/persona", { method: "PUT", body: JSON.stringify(persona) }),
   summary: (month: string) => request<MonthlySummary>(`/entries/summary?month=${month}`),
@@ -45,5 +53,9 @@ export const apiClient = {
   listLoans: () => request<Loan[]>("/loans"),
   createLoan: (payload: LoanCreate) => request<Loan>("/loans", { method: "POST", body: JSON.stringify(payload) }),
   updateLoan: (id: number, payload: Partial<LoanCreate>) => request<Loan>(`/loans/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-  deleteLoan: (id: number) => request<void>(`/loans/${id}`, { method: "DELETE" })
+  deleteLoan: (id: number) => request<void>(`/loans/${id}`, { method: "DELETE" }),
+  listReimbursements: () => request<Reimbursement[]>("/reimbursements"),
+  createReimbursement: (payload: ReimbursementCreate) => request<Reimbursement>("/reimbursements", { method: "POST", body: JSON.stringify(payload) }),
+  updateReimbursement: (id: number, payload: Partial<ReimbursementCreate>) => request<Reimbursement>(`/reimbursements/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteReimbursement: (id: number) => request<void>(`/reimbursements/${id}`, { method: "DELETE" })
 };

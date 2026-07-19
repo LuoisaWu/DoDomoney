@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     content TEXT NOT NULL,
     parsed_json TEXT,
     recorded INTEGER NOT NULL DEFAULT 0,
+    image_url TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -129,3 +130,22 @@ CREATE TABLE IF NOT EXISTS loans (
 
 CREATE INDEX IF NOT EXISTS idx_loans_ledger_borrowed_at
 ON loans (ledger_id, borrowed_at DESC);
+
+CREATE TABLE IF NOT EXISTS reimbursements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ledger_id INTEGER NOT NULL REFERENCES ledgers(id) ON DELETE CASCADE,
+    merchant TEXT NOT NULL,
+    invoice_title TEXT NOT NULL DEFAULT '',
+    amount TEXT NOT NULL,
+    invoice_date TEXT NOT NULL,
+    category TEXT NOT NULL,
+    invoice_number TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL CHECK (status IN ('pending', 'submitted', 'reimbursed')) DEFAULT 'pending',
+    note TEXT NOT NULL DEFAULT '',
+    image_url TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_reimbursements_ledger_invoice_date
+ON reimbursements (ledger_id, invoice_date DESC);

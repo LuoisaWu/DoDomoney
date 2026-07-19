@@ -28,6 +28,18 @@ class RegisterRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     display_name: str = Field(min_length=1, max_length=80)
     password: str = Field(min_length=8, max_length=128)
+    verification_code: str = Field(pattern=r"^\d{6}$")
+
+
+class VerificationCodeRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+
+class VerificationCodeResponse(BaseModel):
+    message: str
+    retry_after: int
+    expires_in: int
+    development_code: Optional[str] = None
 
 
 class LoginResponse(BaseModel):
@@ -119,6 +131,8 @@ class ParsedTransaction(BaseModel):
     follow_up_question: Optional[str] = Field(default=None, max_length=300)
     description: Optional[str] = Field(default=None, max_length=500)
     subcategory: Optional[str] = Field(default=None, max_length=80)
+    target_ledger_id: Optional[int] = None
+    target_ledger_name: Optional[str] = Field(default=None, max_length=120)
 
     @property
     def is_complete(self) -> bool:
@@ -149,6 +163,8 @@ class ParsedLoan(BaseModel):
     follow_up_fields: list[LoanFollowUpField] = Field(default_factory=list)
     follow_up_question: Optional[str] = Field(default=None, max_length=300)
     awaiting_confirmation: bool = False
+    target_ledger_id: Optional[int] = None
+    target_ledger_name: Optional[str] = Field(default=None, max_length=120)
 
     @property
     def is_complete(self) -> bool:
@@ -164,10 +180,45 @@ class ParsedLoan(BaseModel):
         return all(required) and not self.follow_up_fields
 
 
+ReimbursementFollowUpField = Literal["merchant", "amount", "invoice_date", "category"]
+
+
+class ParsedReimbursement(BaseModel):
+    merchant: Optional[str] = Field(default=None, max_length=120)
+    invoice_title: str = Field(default="", max_length=120)
+    amount: Optional[Decimal] = Field(default=None, gt=0)
+    invoice_date: Optional[date] = None
+    category: Optional[str] = Field(default=None, max_length=80)
+    invoice_number: str = Field(default="", max_length=80)
+    status: Literal["pending", "submitted", "reimbursed"] = "pending"
+    note: str = Field(default="", max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=1000)
+    confidence: float = Field(default=0.8, ge=0, le=1)
+    follow_up_fields: list[ReimbursementFollowUpField] = Field(default_factory=list)
+    follow_up_question: Optional[str] = Field(default=None, max_length=300)
+    awaiting_confirmation: bool = False
+    target_ledger_id: Optional[int] = None
+    target_ledger_name: Optional[str] = Field(default=None, max_length=120)
+
+    @property
+    def is_complete(self) -> bool:
+        return all((self.merchant, self.amount, self.invoice_date, self.category)) and not self.follow_up_fields
+
+
+class DocumentOcrContext(BaseModel):
+    image_url: str = Field(max_length=1000)
+    extracted_text: str = Field(default="", max_length=10000)
+    document_type: Literal["invoice", "loan_note", "repayment", "unknown"] = "unknown"
+    confidence: float = Field(default=0, ge=0, le=1)
+    status: Literal["completed", "pending_provider"] = "pending_provider"
+
+
 class ChatRecordRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     pending_context: Optional[ParsedTransaction] = None
     pending_loan: Optional[ParsedLoan] = None
+    pending_reimbursement: Optional[ParsedReimbursement] = None
+    image_context: Optional[DocumentOcrContext] = None
 
 
 class AssistantPersonaBase(BaseModel):
@@ -197,9 +248,11 @@ class ChatRecordResponse(BaseModel):
     reply: str
     entry: Optional[EntryRead] = None
     loan_id: Optional[int] = None
-    record_type: Literal["transaction", "loan"] = "transaction"
+    reimbursement_id: Optional[int] = None
+    record_type: Literal["transaction", "loan", "reimbursement"] = "transaction"
     parsed: Optional[ParsedTransaction] = None
     parsed_loan: Optional[ParsedLoan] = None
+    parsed_reimbursement: Optional[ParsedReimbursement] = None
     needs_follow_up: bool = False
 
 
@@ -209,12 +262,19 @@ class ChatMessageRead(BaseModel):
     content: str
     parsed: Optional[ParsedTransaction] = None
     parsed_loan: Optional[ParsedLoan] = None
+    parsed_reimbursement: Optional[ParsedReimbursement] = None
+    image_url: Optional[str] = None
     recorded: bool = False
     created_at: datetime
 
 
 class AvatarUploadResponse(BaseModel):
     url: str
+
+
+class DocumentOcrResponse(DocumentOcrContext):
+    provider_configured: bool = False
+    message: str
 
 
 class BudgetCreate(BaseModel):
@@ -326,6 +386,41 @@ class LoanUpdate(BaseModel):
 
 
 class LoanRead(LoanBase):
+    id: int
+    ledger_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ReimbursementBase(BaseModel):
+    merchant: str = Field(min_length=1, max_length=120)
+    invoice_title: str = Field(default="", max_length=120)
+    amount: Decimal = Field(gt=0)
+    invoice_date: date
+    category: str = Field(min_length=1, max_length=80)
+    invoice_number: str = Field(default="", max_length=80)
+    status: Literal["pending", "submitted", "reimbursed"] = "pending"
+    note: str = Field(default="", max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=1000)
+
+
+class ReimbursementCreate(ReimbursementBase):
+    ledger_id: Optional[int] = None
+
+
+class ReimbursementUpdate(BaseModel):
+    merchant: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    invoice_title: Optional[str] = Field(default=None, max_length=120)
+    amount: Optional[Decimal] = Field(default=None, gt=0)
+    invoice_date: Optional[date] = None
+    category: Optional[str] = Field(default=None, min_length=1, max_length=80)
+    invoice_number: Optional[str] = Field(default=None, max_length=80)
+    status: Optional[Literal["pending", "submitted", "reimbursed"]] = None
+    note: Optional[str] = Field(default=None, max_length=500)
+    image_url: Optional[str] = Field(default=None, max_length=1000)
+
+
+class ReimbursementRead(ReimbursementBase):
     id: int
     ledger_id: int
     created_at: datetime

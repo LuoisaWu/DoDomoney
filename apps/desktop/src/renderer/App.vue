@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BarChart3, Bot, ClipboardList, HandCoins, LogOut, Settings, Users, WalletCards } from "lucide-vue-next";
+import { BarChart3, Bot, Calculator, ClipboardList, HandCoins, LogOut, ReceiptText, Settings, Users } from "lucide-vue-next";
 import { computed, onMounted, ref } from "vue";
 import type { Component } from "vue";
 import AccountsPage from "./pages/AccountsPage.vue";
@@ -8,16 +8,21 @@ import ChatPage from "./pages/ChatPage.vue";
 import EntriesPage from "./pages/EntriesPage.vue";
 import InsightsPage from "./pages/InsightsPage.vue";
 import LoansPage from "./pages/LoansPage.vue";
+import ReimbursementsPage from "./pages/ReimbursementsPage.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
-import { apiClient, setApiContext } from "./services/apiClient";
+import TaxPage from "./pages/TaxPage.vue";
+import { billBuddyLogo } from "./brandAssets";
+import { apiClient, resolveMediaUrl, setApiContext } from "./services/apiClient";
 import type { AssistantPersona, Entry, Ledger, LoginResponse, User } from "./types";
 
-type Page = "chat" | "entries" | "loans" | "insights" | "accounts" | "settings";
+type Page = "chat" | "entries" | "loans" | "reimbursements" | "tax" | "insights" | "accounts" | "settings";
 
 const navItems = [
   { key: "chat", label: "AI 记账", icon: Bot },
   { key: "entries", label: "账单明细", icon: ClipboardList },
   { key: "loans", label: "借款管理", icon: HandCoins },
+  { key: "reimbursements", label: "发票报销", icon: ReceiptText },
+  { key: "tax", label: "个税计算", icon: Calculator },
   { key: "insights", label: "收支分析", icon: BarChart3 },
   { key: "accounts", label: "用户与账本", icon: Users },
   { key: "settings", label: "助手设置", icon: Settings }
@@ -124,13 +129,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="restoringSession" class="app-loading"><div class="brand-mark"><WalletCards :size="22" /></div><span>正在打开 Dodomoney...</span></div>
+  <div v-if="restoringSession" class="app-loading"><div class="brand-mark"><img :src="billBuddyLogo" alt="Dodomoney" /></div><span>正在打开 Dodomoney...</span></div>
   <AuthPage v-else-if="!user" @authenticated="finishAuthentication" />
   <div v-else class="app-shell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark">
-          <WalletCards :size="22" />
+          <img :src="billBuddyLogo" alt="Dodomoney" />
         </div>
         <div>
           <strong>Dodomoney</strong>
@@ -156,7 +161,7 @@ onMounted(() => {
         <span>{{ activeLedger?.name ?? "记下每一笔，月底更从容。" }}</span>
       </div>
       <div class="sidebar-profile">
-        <span class="sidebar-avatar"><img v-if="user.avatar_url" :src="user.avatar_url" alt="" /><template v-else>{{ user.display_name.slice(0, 1) }}</template></span>
+        <span class="sidebar-avatar"><img v-if="user.avatar_url" :src="resolveMediaUrl(user.avatar_url)" alt="" /><template v-else>{{ user.display_name.slice(0, 1) }}</template></span>
         <span class="sidebar-user"><strong>{{ user.display_name }}</strong><small>{{ user.email }}</small></span>
         <button title="退出登录" @click="logout"><LogOut :size="17" /></button>
       </div>
@@ -174,6 +179,8 @@ onMounted(() => {
       />
       <InsightsPage v-else-if="page === 'insights'" :entries="entries" />
       <LoansPage v-else-if="page === 'loans' && activeLedgerId" :ledger-id="activeLedgerId" />
+      <ReimbursementsPage v-else-if="page === 'reimbursements' && activeLedgerId" :ledger-id="activeLedgerId" />
+      <TaxPage v-else-if="page === 'tax'" />
       <AccountsPage
         v-else-if="page === 'accounts' && user && activeLedgerId"
         :user="user"

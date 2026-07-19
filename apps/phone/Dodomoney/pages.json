@@ -1,0 +1,55 @@
+{
+  "pages": [
+    { "path": "pages/index/index", "style": { "navigationBarTitleText": "AI 记账" } },
+    { "path": "pages/entries/entries", "style": { "navigationBarTitleText": "账单明细" } },
+    { "path": "pages/insights/insights", "style": { "navigationBarTitleText": "收支分析" } },
+    { "path": "pages/loans/loans", "style": { "navigationBarTitleText": "借款管理" } },
+    { "path": "pages/more/more", "style": { "navigationBarTitleText": "更多" } },
+    { "path": "pages/auth/auth", "style": { "navigationStyle": "custom" } },
+    { "path": "pages/reimbursements/reimbursements", "style": { "navigationBarTitleText": "发票报销" } },
+    { "path": "pages/tax/tax", "style": { "navigationBarTitleText": "个税计算" } },
+    { "path": "pages/accounts/accounts", "style": { "navigationBarTitleText": "用户与账本" } },
+    { "path": "pages/settings/settings", "style": { "navigationBarTitleText": "助手设置" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#fffaf1",
+    "backgroundColor": "#f7f3ea",
+    "navigationBarTitleText": "Dodomoney"
+  },
+  "tabBar": {
+    "color": "#8a8072", "selectedColor": "#dc744d", "backgroundColor": "#fffdf8", "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index", "text": "AI记账",
+        // #ifdef MP-WEIXIN || APP-PLUS
+        "iconPath": "static/tabbar/ai.png", "selectedIconPath": "static/tabbar/ai-active.png"
+        // #endif
+      },
+      {
+        "pagePath": "pages/entries/entries", "text": "明细",
+        // #ifdef MP-WEIXIN || APP-PLUS
+        "iconPath": "static/tabbar/entries.png", "selectedIconPath": "static/tabbar/entries-active.png"
+        // #endif
+      },
+      {
+        "pagePath": "pages/insights/insights", "text": "分析",
+        // #ifdef MP-WEIXIN || APP-PLUS
+        "iconPath": "static/tabbar/insights.png", "selectedIconPath": "static/tabbar/insights-active.png"
+        // #endif
+      },
+      {
+        "pagePath": "pages/loans/loans", "text": "借款",
+        // #ifdef MP-WEIXIN || APP-PLUS
+        "iconPath": "static/tabbar/loans.png", "selectedIconPath": "static/tabbar/loans-active.png"
+        // #endif
+      },
+      {
+        "pagePath": "pages/more/more", "text": "更多",
+        // #ifdef MP-WEIXIN || APP-PLUS
+        "iconPath": "static/tabbar/more.png", "selectedIconPath": "static/tabbar/more-active.png"
+        // #endif
+      }
+    ]
+  }
+}

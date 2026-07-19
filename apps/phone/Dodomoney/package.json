@@ -1,0 +1,25 @@
+{
+  "name": "@dodomoney/phone",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:h5": "set UNI_INPUT_DIR=%CD%&& uni -p h5",
+    "dev:app": "set UNI_INPUT_DIR=%CD%&& uni -p app",
+    "dev:mp-weixin": "set UNI_INPUT_DIR=%CD%&& uni -p mp-weixin",
+    "build:h5": "set UNI_INPUT_DIR=%CD%&& uni build -p h5",
+    "build:app": "set UNI_INPUT_DIR=%CD%&& uni build -p app",
+    "build:mp-weixin": "set UNI_INPUT_DIR=%CD%&& uni build -p mp-weixin"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "vue3",
+    "@dcloudio/uni-components": "vue3",
+    "@dcloudio/uni-h5": "vue3",
+    "@dcloudio/uni-mp-weixin": "vue3",
+    "vue": "3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.14",
+    "@dcloudio/vite-plugin-uni": "vue3",
+    "vite": "5.2.8"
+  }
+}
